@@ -1,0 +1,11 @@
+前端构建
+docker build -t frontend-builder -f dockerfile-frontend .
+docker run -d --name frontend-container -v /opt/aiserver/manager-web:/app  frontend-builder
+docker exec frontend-container build-frontend.sh
+
+后端构建
+docker build -t java-builder -f dockerfile-java .
+#docker run -d --name java-container -v /opt/aiserver/manager-api:/app -v $(pwd)/jars:/app/target java-builder
+docker run -d --name java-container -v /opt/aiserver/manager-api:/app  java-builder
+docker exec java-container build-java.sh
+

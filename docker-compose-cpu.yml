@@ -1,0 +1,109 @@
+# Docker安装全模块
+version: '3'
+services:
+  # Server模块
+  neurodrive-server-ai:
+    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest
+    container_name: neurodrive-server-ai
+    depends_on:
+      - neurodrive-server-db
+      - neurodrive-server-redis
+    restart: always
+    networks:
+      - default
+    ports:
+      # ws服务端
+      - "8000:8000"
+      # http服务的端口，用于视觉分析接口
+      - "8003:8003"
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - TZ=Asia/Shanghai
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      #添加项目目录
+      - ./neurodrive-server:/opt/xiaozhi-esp32-server
+      # 配置文件目录
+      #- ./neurodrive-server/data:/opt/xiaozhi-esp32-server/data
+      # 模型文件挂接，很重要
+      - /opt/aiserver_resources/models:/opt/xiaozhi-esp32-server/models
+    # 添加以下GPU支持配置：
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          count: 1
+    #          capabilities: [gpu]
+    # 指定NVIDIA运行时（必需）：
+    # runtime: nvidia
+
+  # manager-api和manager-web模块
+  neurodrive-server-web:
+    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest # 初始镜像
+    container_name: neurodrive-server-web
+    restart: always
+    networks:
+      - default
+    depends_on:
+      neurodrive-server-db:
+        condition: service_healthy
+      neurodrive-server-redis:
+        condition: service_healthy
+    ports:
+      # 智控台
+      - "8002:8002"
+    environment:
+      - TZ=Asia/Shanghai
+      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://neurodrive-server-db:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+      - SPRING_DATASOURCE_DRUID_USERNAME=root
+      - SPRING_DATASOURCE_DRUID_PASSWORD=123456
+      - SPRING_DATA_REDIS_HOST=neurodrive-server-redis
+      - SPRING_DATA_REDIS_PASSWORD=
+      - SPRING_DATA_REDIS_PORT=6379
+    volumes:
+      # 配置文件目录
+      - ./uploadfile:/uploadfile
+      # 前端包
+      - /opt/aiserver/manager-web/dist/:/usr/share/nginx/html
+      # 后端包
+      - /opt/aiserver/manager-api/target/xiaozhi-esp32-api.jar:/app/xiaozhi-esp32-api.jar
+  # 数据库模块
+  neurodrive-server-db:
+    image: mysql:latest
+    container_name: neurodrive-server-db
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    restart: always
+    networks:
+      - default
+    expose:
+      - 3306
+    volumes:
+      - /opt/aiserver_resources/mysql/data:/var/lib/mysql
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=xiaozhi_esp32_server
+      - MYSQL_INITDB_ARGS="--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
+  # redis模块
+  neurodrive-server-redis:
+    image: redis
+    expose:
+      - 6379
+    container_name: neurodrive-server-redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - default
+networks:
+  default:

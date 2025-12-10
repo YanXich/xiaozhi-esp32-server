@@ -1,0 +1,44 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-device-table
+      author: developer
+      changes:
+        - createTable:
+            tableName: device
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: device_number
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_device_device_number
+                    references: device_number(device_number)
+              - column:
+                  name: mac_address
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: car_model
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: true
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: "未使用"
+                  constraints:
+                    nullable: false

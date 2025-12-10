@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-device-number-table
+      author: developer
+      changes:
+        - createTable:
+            tableName: device_number
+            columns:
+              - column:
+                  name: device_number
+                  type: varchar(50)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: batch_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_device_number_batch
+                    references: production_batch(id)
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: "初始化"
+                  constraints:
+                    nullable: false

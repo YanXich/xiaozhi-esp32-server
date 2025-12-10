@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-production-batch-table
+      author: developer
+      changes:
+        - createTable:
+            tableName: production_batch
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: factory_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_batch_factory
+                    references: factory(id)
+              - column:
+                  name: model_type
+                  type: varchar(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: production_date
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hardware_version
+                  type: varchar(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: agent_code
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: "待生产"
+                  constraints:
+                    nullable: false

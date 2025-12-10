@@ -1,0 +1,25 @@
+{
+  "groups": [
+    {
+      "name": "renren.xss",
+      "type": "xiaozhi.common.xss.XssProperties",
+      "sourceType": "xiaozhi.common.xss.XssProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "renren.xss.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否开启 XSS",
+      "sourceType": "xiaozhi.common.xss.XssProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "renren.xss.exclude-urls",
+      "type": "java.util.List<java.lang.String>",
+      "description": "排除的URL列表",
+      "sourceType": "xiaozhi.common.xss.XssProperties"
+    }
+  ],
+  "hints": []
+}

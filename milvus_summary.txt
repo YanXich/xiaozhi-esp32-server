@@ -1,0 +1,7 @@
+Collections: ["demo_collection", "mem0migrations", "xiaozhi_memories", "xiaozhi_mem0"]
+
+Summary:
+- demo_collection: rows=None, pk=id, fields=[('id', <DataType.INT64: 5>), ('embedding', <DataType.FLOAT_VECTOR: 101>), ('title', <DataType.VARCHAR: 21>), ('category', <DataType.VARCHAR: 21>), ('score', <DataType.FLOAT: 10>)]
+- mem0migrations: rows=None, pk=id, fields=[('id', <DataType.VARCHAR: 21>), ('vectors', <DataType.FLOAT_VECTOR: 101>), ('metadata', <DataType.JSON: 23>)]
+- xiaozhi_memories: rows=None, pk=id, fields=[('id', <DataType.VARCHAR: 21>), ('vectors', <DataType.FLOAT_VECTOR: 101>), ('metadata', <DataType.JSON: 23>)]
+- xiaozhi_mem0: rows=None, pk=id, fields=[('id', <DataType.VARCHAR: 21>), ('vectors', <DataType.FLOAT_VECTOR: 101>), ('metadata', <DataType.JSON: 23>)]

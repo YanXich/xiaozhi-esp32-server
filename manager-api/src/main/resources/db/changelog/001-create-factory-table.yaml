@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-factory-table
+      author: developer
+      changes:
+        - createTable:
+            tableName: factory
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: country
+                  type: varchar(10)
+                  defaultValue: "86"
+                  constraints:
+                    nullable: false

@@ -1,0 +1,22 @@
+# 忽略上传文件中的临时文件和缓存
+pycache/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.eggs/
+
+# 忽略日志文件
+*.log
+
+# 忽略IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+
