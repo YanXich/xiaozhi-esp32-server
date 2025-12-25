@@ -1,6 +1,7 @@
 import json
 import time
 from aiohttp import web
+import aiohttp
 from core.utils.util import get_local_ip
 from core.api.base_handler import BaseHandler
 from pathlib import Path
@@ -195,6 +196,20 @@ class OggDownloadHandler(BaseHandler):
             else:
                 raise ValueError(f"Unsupported 'file' parameter: {requested}")
             response_obj = self.file_string_map[map_key]
+            if map_key == "wakeup.ogg":
+                try:
+                    timeout = aiohttp.ClientTimeout(total=5)
+                    async with aiohttp.ClientSession(timeout=timeout) as session:
+                        async with session.post("https://api.neurodrive.cn/api/car/getInfo", json={"device_mac": device_id}) as resp:
+                            if resp.status == 200:
+                                payload = await resp.json(content_type=None)
+                                data_obj = payload.get("data")
+                                if isinstance(data_obj, dict):
+                                    greet = data_obj.get("greetings")
+                                    if isinstance(greet, str) and len(greet) > 0:
+                                        response_obj = greet
+                except Exception:
+                    pass
             base_name = os.path.splitext(map_key)[0]
             if isinstance(response_obj, (list, tuple)):
                 index_str = request.query.get('index')
