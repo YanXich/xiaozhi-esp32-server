@@ -1,4 +1,6 @@
 import json
+import asyncio
+import aiohttp
 from aiohttp import web
 from core.api.base_handler import BaseHandler
 
@@ -9,9 +11,13 @@ class DeviceControlHandler(BaseHandler):
     def __init__(self, config: dict, websocket_server=None):
         super().__init__(config)
         self.websocket_server = websocket_server
-    # 添加群组管理
-        self.active_groups = {}  # 存储活跃的群组信息
-   
+        self.active_groups = {}
+        if not hasattr(DeviceControlHandler, "_shared_pending_cmds"):
+            DeviceControlHandler._shared_pending_cmds = {}
+        self.pending_cmds = DeviceControlHandler._shared_pending_cmds
+        if not hasattr(DeviceControlHandler, "_shared_device_status"):
+            DeviceControlHandler._shared_device_status = {}
+        self.device_status = DeviceControlHandler._shared_device_status
 
     async def handle_post(self, request):
         """处理设备控制POST请求"""
@@ -65,6 +71,12 @@ class DeviceControlHandler(BaseHandler):
                     break
 
             if not target_connection:
+                try:
+                    if self.device_status.get(device_id) != 0:
+                        self.device_status[device_id] = 0
+                        await self._notify_app_online_status(device_id, 0)
+                except Exception as _:
+                    pass
                 return web.Response(
                     text=json.dumps({"success": False, "message": "设备未连接"}),
                     content_type="application/json"
@@ -79,21 +91,51 @@ class DeviceControlHandler(BaseHandler):
             if parameters:
                 command_data["parameters"] = parameters
 
-            # 构建WebSocket消息
-            ws_message = json.dumps({
-                "type": "iot",
-                "cmd": command
-            })
-
-            # 发送WebSocket消息
+            ws_message = json.dumps({"type": "iot", "cmd": command})
             await target_connection.websocket.send(ws_message)
             self.logger.bind(tag=TAG).info(f"成功发送控制指令 {command} 到设备 {device_id}")
-            
-            # 返回成功响应
-            return web.Response(
-                text=json.dumps({"success": True, "message": "指令已发送"}),
-                content_type="application/json"
-            )
+            if device_id not in self.pending_cmds:
+                self.pending_cmds[device_id] = {}
+            wait_event = asyncio.Event()
+            self.pending_cmds[device_id][command] = wait_event
+            try:
+                await asyncio.wait_for(wait_event.wait(), timeout=5.0)
+                try:
+                    if self.device_status.get(device_id) != 1:
+                        self.device_status[device_id] = 1
+                        await self._notify_app_online_status(device_id, 1)
+                except Exception as _:
+                    pass
+                return web.Response(
+                    text=json.dumps({"success": True, "message": "设备已确认指令"}),
+                    content_type="application/json"
+                )
+            except asyncio.TimeoutError:
+                is_online = False
+                for conn in self.websocket_server.active_connections:
+                    if hasattr(conn, "device_id") and conn.device_id == device_id and hasattr(conn, "websocket") and conn.websocket:
+                        try:
+                            pong_waiter = await conn.websocket.ping()
+                            await asyncio.wait_for(pong_waiter, timeout=1.0)
+                            is_online = True
+                        except Exception:
+                            is_online = False
+                        break
+                status_msg = "设备在线但未确认指令" if is_online else "设备未在线"
+                try:
+                    new_status = 1 if is_online else 0
+                    if self.device_status.get(device_id) != new_status:
+                        self.device_status[device_id] = new_status
+                        await self._notify_app_online_status(device_id, new_status)
+                except Exception as _:
+                    pass
+                return web.Response(
+                    text=json.dumps({"success": False, "message": status_msg}),
+                    content_type="application/json"
+                )
+            finally:
+                if device_id in self.pending_cmds and command in self.pending_cmds[device_id]:
+                    del self.pending_cmds[device_id][command]
 
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"处理设备控制请求失败: {e}")
@@ -147,6 +189,21 @@ class DeviceControlHandler(BaseHandler):
         response = web.Response()
         self._add_cors_headers(response)
         return response
+
+    async def _notify_app_online_status(self, device_mac: str, status: int):
+        url = "https://api.neurodrive.cn/api/car/onlineStatusCallback"
+        payload = {"device_mac": device_mac, "status": status}
+        headers = {}
+        cfg = self.config.get("manager-api", {}) if isinstance(self.config, dict) else {}
+        token = cfg.get("secret")
+        if token:
+            headers["Authorization"] = "Bearer " + token
+            headers["Accept"] = "application/json"
+        timeout = aiohttp.ClientTimeout(total=3)
+        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+            async with session.post(url, json=payload) as resp:
+                await resp.text()
+                self.logger.bind(tag=TAG).info(f"已回调在线状态: device_mac={device_mac}, status={status}, http_status={resp.status}")
 
     async def handle_group_response(self, device_id, response, group_id):
         """
